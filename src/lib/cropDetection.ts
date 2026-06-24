@@ -286,7 +286,7 @@ function detectOneBox(
   region: { x: number; y: number; width: number; height: number },
   ratio: number,
 ) {
-  const frame = framedSlideBounds(image, region);
+  const frame = framedSlideBounds(image, region, ratio);
   const bounds = frame?.rect ?? projectedInkBounds(image, region) ?? inkBounds(image, region);
   const fitted = fitRatio(bounds, ratio);
   const fallback = fitRatio(region, ratio);
@@ -300,6 +300,7 @@ function detectOneBox(
 function framedSlideBounds(
   image: ImageData,
   region: { x: number; y: number; width: number; height: number },
+  expectedRatio: number,
 ) {
   const left = Math.max(0, Math.floor(region.x));
   const top = Math.max(0, Math.floor(region.y));
@@ -341,14 +342,24 @@ function framedSlideBounds(
           const frameWidth = rightRule.center - leftRule.center;
           if (frameWidth < region.width * 0.35) continue;
 
-          const ratio = frameWidth / frameHeight;
-          if (ratio < 1.05 || ratio > 2.4) continue;
+          const detectedRatio = frameWidth / frameHeight;
+          if (detectedRatio < 1.05 || detectedRatio > 2.4) continue;
+
+          const ratioError = Math.abs(detectedRatio - expectedRatio) / expectedRatio;
+          if (ratioError > 0.18) continue;
 
           const horizontalStrength =
             (topRule.max + bottomRule.max) / 2 / Math.max(1, frameWidth);
           const verticalStrength =
             (leftRule.max + rightRule.max) / 2 / Math.max(1, frameHeight);
-          const score = Math.min(1, horizontalStrength * 0.6 + verticalStrength * 0.6);
+          const areaShare = (frameWidth * frameHeight) / (region.width * region.height);
+          const score = Math.min(
+            1,
+            areaShare * 0.8 +
+              (1 - ratioError) * 0.25 +
+              horizontalStrength * 0.08 +
+              verticalStrength * 0.08,
+          );
 
           if (!best || score > best.score) {
             best = {
