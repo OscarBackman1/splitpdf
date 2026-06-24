@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   applyAdjustments,
+  normalizeFrameTemplateToLayout,
   powerpointHandoutTemplate,
   presetTemplate,
   simpleHalfTemplate,
@@ -26,6 +27,24 @@ describe("crop templates", () => {
     expect(template.first.left).toBeCloseTo(66);
     expect(template.first.right).toBeCloseTo(546);
     expect(template.first.top - template.first.bottom).toBeCloseTo(270);
+    expect(template.second.top - template.second.bottom).toBeCloseTo(270);
+  });
+
+  it("normalizes frame templates using shared inner edges", () => {
+    const template = normalizeFrameTemplateToLayout(
+      {
+        first: { left: 64, bottom: 432, right: 548, top: 705 },
+        second: { left: 66, bottom: 66, right: 546, top: 336 },
+      },
+      { width: 612, height: 792 },
+      "top-bottom",
+    );
+
+    expect(template.first.left).toBeCloseTo(66);
+    expect(template.first.right).toBeCloseTo(546);
+    expect(template.first.top - template.first.bottom).toBeCloseTo(270);
+    expect(template.second.left).toBeCloseTo(66);
+    expect(template.second.right).toBeCloseTo(546);
     expect(template.second.top - template.second.bottom).toBeCloseTo(270);
   });
 

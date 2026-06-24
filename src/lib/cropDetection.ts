@@ -128,7 +128,7 @@ export function slideFrameTemplate(
   if (!boxes[0].frame || !boxes[1].frame) return null;
 
   return {
-    template: normalizeTemplateToLayout(
+    template: normalizeFrameTemplateToLayout(
       {
         first: canvasRectToPdfBox(boxes[0].rect, canvas, page),
         second: canvasRectToPdfBox(boxes[1].rect, canvas, page),
@@ -175,14 +175,14 @@ export function detectTemplateFromCanvas(
       : aspectRatioValue(ratioKind, customAspectRatio);
 
   const boxes = halfRects.map((rect) => detectOneBox(image, rect, ratio));
-  const template = normalizeTemplateToLayout(
-    {
-      first: canvasRectToPdfBox(boxes[0].rect, canvas, page),
-      second: canvasRectToPdfBox(boxes[1].rect, canvas, page),
-    },
-    page,
-    layout,
-  );
+  const rawTemplate = {
+    first: canvasRectToPdfBox(boxes[0].rect, canvas, page),
+    second: canvasRectToPdfBox(boxes[1].rect, canvas, page),
+  };
+  const template =
+    boxes[0].frame && boxes[1].frame
+      ? normalizeFrameTemplateToLayout(rawTemplate, page, layout)
+      : normalizeTemplateToLayout(rawTemplate, page, layout);
   const score = Math.min(boxes[0].score, boxes[1].score);
   const label = ratioKind === "auto" ? formatRatio(ratio) : ratioKind;
 
@@ -248,6 +248,47 @@ export function normalizeTemplateToLayout(
   return {
     first: clampBox(centeredBox(centerX, template.first.bottom + firstHeight / 2, width, height), page),
     second: clampBox(centeredBox(centerX, template.second.bottom + secondHeight / 2, width, height), page),
+  };
+}
+
+export function normalizeFrameTemplateToLayout(
+  template: CropTemplate,
+  page: PageSize,
+  layout: SplitLayout,
+): CropTemplate {
+  const firstWidth = template.first.right - template.first.left;
+  const secondWidth = template.second.right - template.second.left;
+  const firstHeight = template.first.top - template.first.bottom;
+  const secondHeight = template.second.top - template.second.bottom;
+
+  if (layout === "left-right") {
+    const bottom = Math.max(template.first.bottom, template.second.bottom);
+    const top = Math.min(template.first.top, template.second.top);
+    const width = Math.min(firstWidth, secondWidth);
+    return {
+      first: clampBox(
+        centeredBox(template.first.left + firstWidth / 2, (bottom + top) / 2, width, top - bottom),
+        page,
+      ),
+      second: clampBox(
+        centeredBox(template.second.left + secondWidth / 2, (bottom + top) / 2, width, top - bottom),
+        page,
+      ),
+    };
+  }
+
+  const left = Math.max(template.first.left, template.second.left);
+  const right = Math.min(template.first.right, template.second.right);
+  const height = Math.min(firstHeight, secondHeight);
+  return {
+    first: clampBox(
+      centeredBox((left + right) / 2, template.first.bottom + firstHeight / 2, right - left, height),
+      page,
+    ),
+    second: clampBox(
+      centeredBox((left + right) / 2, template.second.bottom + secondHeight / 2, right - left, height),
+      page,
+    ),
   };
 }
 
