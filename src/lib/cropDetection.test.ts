@@ -30,7 +30,7 @@ describe("crop templates", () => {
     expect(template.second.top - template.second.bottom).toBeCloseTo(270);
   });
 
-  it("normalizes frame templates using shared inner edges", () => {
+  it("normalizes frame templates with a small outward safety margin", () => {
     const template = normalizeFrameTemplateToLayout(
       {
         first: { left: 64, bottom: 432, right: 548, top: 705 },
@@ -40,12 +40,12 @@ describe("crop templates", () => {
       "top-bottom",
     );
 
-    expect(template.first.left).toBeCloseTo(66);
-    expect(template.first.right).toBeCloseTo(546);
-    expect(template.first.top - template.first.bottom).toBeCloseTo(270);
-    expect(template.second.left).toBeCloseTo(66);
-    expect(template.second.right).toBeCloseTo(546);
-    expect(template.second.top - template.second.bottom).toBeCloseTo(270);
+    expect(template.first.left).toBeLessThan(64);
+    expect(template.first.right).toBeGreaterThan(548);
+    expect(template.first.top - template.first.bottom).toBeGreaterThan(273);
+    expect(template.second.left).toBeLessThan(64);
+    expect(template.second.right).toBeGreaterThan(548);
+    expect(template.second.top - template.second.bottom).toBeGreaterThan(273);
   });
 
   it("applies extra margin and gutter adjustments", () => {

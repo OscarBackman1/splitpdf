@@ -260,11 +260,12 @@ export function normalizeFrameTemplateToLayout(
   const secondWidth = template.second.right - template.second.left;
   const firstHeight = template.first.top - template.first.bottom;
   const secondHeight = template.second.top - template.second.bottom;
+  const framePad = Math.max(1.5, Math.min(page.width, page.height) * 0.003);
 
   if (layout === "left-right") {
-    const bottom = Math.max(template.first.bottom, template.second.bottom);
-    const top = Math.min(template.first.top, template.second.top);
-    const width = Math.min(firstWidth, secondWidth);
+    const bottom = Math.min(template.first.bottom, template.second.bottom) - framePad;
+    const top = Math.max(template.first.top, template.second.top) + framePad;
+    const width = Math.max(firstWidth, secondWidth) + framePad * 2;
     return {
       first: clampBox(
         centeredBox(template.first.left + firstWidth / 2, (bottom + top) / 2, width, top - bottom),
@@ -277,9 +278,9 @@ export function normalizeFrameTemplateToLayout(
     };
   }
 
-  const left = Math.max(template.first.left, template.second.left);
-  const right = Math.min(template.first.right, template.second.right);
-  const height = Math.min(firstHeight, secondHeight);
+  const left = Math.min(template.first.left, template.second.left) - framePad;
+  const right = Math.max(template.first.right, template.second.right) + framePad;
+  const height = Math.max(firstHeight, secondHeight) + framePad * 2;
   return {
     first: clampBox(
       centeredBox((left + right) / 2, template.first.bottom + firstHeight / 2, right - left, height),
