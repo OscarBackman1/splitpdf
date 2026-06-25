@@ -160,10 +160,10 @@ export function SettingsPanel({
           <label className="checkbox-line">
             <input
               type="checkbox"
-              checked={settings.skipFirstPage}
-              onChange={(event) => patch({ skipFirstPage: event.target.checked })}
+              checked={settings.keepFirstPageUnsplit}
+              onChange={(event) => patch({ keepFirstPageUnsplit: event.target.checked })}
             />
-            Skip first page
+            Keep first page unsplit
           </label>
 
           <label>
