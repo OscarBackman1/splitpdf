@@ -34,7 +34,7 @@ workerScope.onmessage = async (event: MessageEvent<WorkerRequest>) => {
         ? await withPerPageDetection(event.data.input, event.data.settings)
         : event.data.settings;
     const output = await splitTwoUpPdf(event.data.input, settings, (progress) => {
-      workerScope.postMessage({ type: "progress", progress });
+      workerScope.postMessage({ type: "progress", progress: { ...progress, phase: "splitting" } });
       if (canceled) {
         throw new DOMException("Split canceled.", "AbortError");
       }
@@ -65,13 +65,21 @@ async function withPerPageDetection(
   const templates: Record<number, CropTemplate> = {};
 
   try {
-    for (const pageIndex of selectedPages) {
+    for (const [selectedIndex, pageIndex] of selectedPages.entries()) {
       if (canceled) {
         throw new DOMException("Split canceled.", "AbortError");
       }
 
+      workerScope.postMessage({
+        type: "progress",
+        progress: {
+          currentPage: selectedIndex + 1,
+          totalPages: selectedPages.length,
+          phase: "detecting",
+        },
+      });
       const page = await pdf.getPage(pageIndex + 1);
-      const viewport = page.getViewport({ scale: 1.35 });
+      const viewport = page.getViewport({ scale: 0.9 });
       const canvas = new OffscreenCanvas(Math.floor(viewport.width), Math.floor(viewport.height));
       const context = canvas.getContext("2d", { willReadFrequently: true });
       if (!context) {
@@ -96,6 +104,7 @@ async function withPerPageDetection(
         settings.slideAspectRatio,
         settings.customAspectRatio,
       ).template;
+      page.cleanup();
     }
   } finally {
     await loadingTask.destroy();

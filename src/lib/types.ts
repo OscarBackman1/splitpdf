@@ -54,6 +54,7 @@ export interface SplitSettings {
 export interface SplitProgress {
   currentPage: number;
   totalPages: number;
+  phase?: "detecting" | "splitting";
 }
 
 export interface DetectionResult {

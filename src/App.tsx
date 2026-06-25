@@ -220,7 +220,9 @@ export function App() {
 
   const progressLabel = progress
     ? progress.totalPages > 0
-      ? `Processing page ${progress.currentPage} of ${progress.totalPages}`
+      ? progress.phase === "detecting"
+        ? `Detecting slide boxes on page ${progress.currentPage} of ${progress.totalPages}`
+        : `Processing page ${progress.currentPage} of ${progress.totalPages}`
       : "Preparing PDF..."
     : "";
 
