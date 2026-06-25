@@ -47,10 +47,7 @@ export async function splitTwoUpPdf(
         const [copied] = await output.copyPages(source, [pageIndex]);
         output.addPage(copied);
       } else {
-        const template =
-          settings.cropMode === "per-page-2up-auto" && settings.perPageCropTemplates?.[pageIndex]
-            ? settings.perPageCropTemplates[pageIndex]
-            : computeTemplate({ width, height }, settings);
+        const template = computeTemplate({ width, height }, settings);
         const boxes =
           settings.cropMode === "single-slide-page"
             ? [template.first]
@@ -91,17 +88,6 @@ export function computeTemplate(
 function baseTemplate(page: { width: number; height: number }, settings: SplitSettings) {
   if (settings.cropMode === "single-slide-page") {
     return settings.detectedCropTemplate ?? fullPageTemplate(page);
-  }
-
-  if (settings.cropMode === "per-page-2up-auto") {
-    return (
-      settings.detectedCropTemplate ??
-      powerpointHandoutTemplate(
-        page,
-        settings.layout,
-        aspectRatioValue(settings.slideAspectRatio, settings.customAspectRatio),
-      )
-    );
   }
 
   if (

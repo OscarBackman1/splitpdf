@@ -118,14 +118,13 @@ export function App() {
 
   const handleDetection = useCallback((result: DetectionResult, requestedByUser: boolean) => {
     setDetection(result);
-    if (settings.cropMode === "single-slide-page" || settings.cropMode === "per-page-2up-auto") {
+    if (settings.cropMode === "single-slide-page") {
       invalidateOutput();
       setSettings((current) =>
         current.cropMode === settings.cropMode
           ? {
               ...current,
               detectedCropTemplate: result.template,
-              perPageCropTemplates: undefined,
             }
           : current,
       );
@@ -220,9 +219,7 @@ export function App() {
 
   const progressLabel = progress
     ? progress.totalPages > 0
-      ? progress.phase === "detecting"
-        ? `Detecting slide boxes on page ${progress.currentPage} of ${progress.totalPages}`
-        : `Processing page ${progress.currentPage} of ${progress.totalPages}`
+      ? `Processing page ${progress.currentPage} of ${progress.totalPages}`
       : "Preparing PDF..."
     : "";
 
@@ -266,8 +263,7 @@ export function App() {
               setDetection((current) =>
                 next.cropMode === "manual" ||
                 next.cropMode === "auto-detect" ||
-                next.cropMode === "single-slide-page" ||
-                next.cropMode === "per-page-2up-auto"
+                next.cropMode === "single-slide-page"
                   ? current
                   : null,
               );

@@ -9,7 +9,6 @@ export type SplitOrder =
 export type CropMode =
   | "powerpoint-2up-preset"
   | "single-slide-page"
-  | "per-page-2up-auto"
   | "auto-detect"
   | "manual"
   | "simple-half-split";
@@ -46,7 +45,6 @@ export interface SplitSettings {
   keepFirstPageUnsplit: boolean;
   pageSelection: string;
   detectedCropTemplate?: CropTemplate;
-  perPageCropTemplates?: Record<number, CropTemplate>;
   manualCropTemplate?: CropTemplate;
   outputName?: string;
 }
@@ -54,7 +52,6 @@ export interface SplitSettings {
 export interface SplitProgress {
   currentPage: number;
   totalPages: number;
-  phase?: "detecting" | "splitting";
 }
 
 export interface DetectionResult {

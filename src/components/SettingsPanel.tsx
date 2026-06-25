@@ -88,7 +88,6 @@ export function SettingsPanel({
                 patch({
                   cropMode: event.target.value as SplitSettings["cropMode"],
                   detectedCropTemplate: undefined,
-                  perPageCropTemplates: undefined,
                   manualCropTemplate: undefined,
                   gutter: 0,
                   keepFirstPageUnsplit: false,
@@ -96,7 +95,6 @@ export function SettingsPanel({
               }
             >
               <option value="powerpoint-2up-preset">PowerPoint 2-slide handout</option>
-              <option value="per-page-2up-auto">Detect each page separately</option>
               <option value="single-slide-page">One slide per page</option>
               <option value="auto-detect">Auto-detect slide boxes</option>
               <option value="manual">Manual crop</option>
