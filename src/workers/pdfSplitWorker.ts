@@ -4,6 +4,11 @@ import { parsePageRange } from "../lib/pageRange";
 import { splitTwoUpPdf } from "../lib/splitPdf";
 import type { CropTemplate, PageSize, SplitSettings } from "../lib/types";
 
+pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
+  "pdfjs-dist/build/pdf.worker.min.mjs",
+  import.meta.url,
+).toString();
+
 type WorkerRequest =
   | { type: "split"; input: ArrayBuffer; settings: SplitSettings }
   | { type: "cancel" };
