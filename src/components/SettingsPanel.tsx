@@ -161,7 +161,12 @@ export function SettingsPanel({
             <input
               type="checkbox"
               checked={settings.keepFirstPageUnsplit}
-              onChange={(event) => patch({ keepFirstPageUnsplit: event.target.checked })}
+              onChange={(event) =>
+                patch({
+                  keepFirstPageUnsplit: event.target.checked,
+                  detectedCropTemplate: undefined,
+                })
+              }
             />
             Keep first page unsplit
           </label>

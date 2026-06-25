@@ -14,6 +14,7 @@ interface PdfPreviewProps {
   fileBuffer: ArrayBuffer | null;
   settings: SplitSettings;
   template: CropTemplate | null;
+  previewPageNumber: number;
   onPreviewReady(pageSize: PageSize, canvas: HTMLCanvasElement): void;
   onDetection(result: DetectionResult, requestedByUser: boolean): void;
   onTemplateChange(template: CropTemplate): void;
@@ -32,6 +33,7 @@ export function PdfPreview({
   fileBuffer,
   settings,
   template,
+  previewPageNumber,
   onPreviewReady,
   onDetection,
   onTemplateChange,
@@ -58,7 +60,7 @@ export function PdfPreview({
         });
         const pdf = await loadingTask.promise;
         if (canceled) return;
-        const page = await pdf.getPage(1);
+        const page = await pdf.getPage(Math.min(previewPageNumber, pdf.numPages));
         if (canceled) return;
         const viewport = page.getViewport({ scale: 1.45 });
         const canvas = canvasRef.current;
@@ -79,7 +81,7 @@ export function PdfPreview({
             ? null
             : renderError instanceof Error && renderError.message.toLowerCase().includes("password")
             ? "This PDF appears to be encrypted or password-protected."
-            : "The first page could not be rendered. Check that this is a valid PDF.";
+            : "The preview page could not be rendered. Check that this is a valid PDF.";
         if (!canceled && message) setError(message);
       }
     }
@@ -90,7 +92,7 @@ export function PdfPreview({
       renderTask?.cancel();
       void loadingTask?.destroy();
     };
-  }, [fileBuffer, onPreviewReady]);
+  }, [fileBuffer, onPreviewReady, previewPageNumber]);
 
   useEffect(() => {
     if (!canvasRef.current || !pageSize || renderVersion === 0) return;

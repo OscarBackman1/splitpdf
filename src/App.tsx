@@ -49,6 +49,7 @@ export function App() {
   }, [fileBuffer, pageCount, settings.pageSelection]);
 
   const outputName = ensurePdfExtension(settings.outputName || defaultOutputName(fileName || "split_slides.pdf"));
+  const previewPageNumber = settings.keepFirstPageUnsplit && pageCount > 1 ? 2 : 1;
 
   const displayedTemplate = useMemo<CropTemplate | null>(() => {
     if (!pageSize) return null;
@@ -214,6 +215,7 @@ export function App() {
               fileBuffer={fileBuffer}
               settings={settings}
               template={displayedTemplate}
+              previewPageNumber={previewPageNumber}
               onPreviewReady={handlePreviewReady}
               onDetection={handleDetection}
               onTemplateChange={handleTemplateChange}
@@ -236,9 +238,16 @@ export function App() {
             downloadUrl={downloadUrl}
             outputName={outputName}
             onSettingsChange={(next) => {
+              const previewPageWillChange =
+                next.keepFirstPageUnsplit !== settings.keepFirstPageUnsplit && pageCount > 1;
               invalidateOutput();
+              if (previewPageWillChange) {
+                setPageSize(null);
+              }
               setSettings(next);
-              setDetection((current) => (next.detectedCropTemplate ? current : null));
+              setDetection((current) =>
+                next.detectedCropTemplate && !previewPageWillChange ? current : null,
+              );
             }}
             onDetect={() => setDetectionRequest((count) => count + 1)}
             onSplit={splitPdf}
