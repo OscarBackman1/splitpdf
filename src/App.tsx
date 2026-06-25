@@ -55,6 +55,18 @@ export function App() {
     return computeTemplate(pageSize, settings);
   }, [pageSize, settings]);
 
+  const invalidateOutput = useCallback(() => {
+    workerRef.current?.terminate();
+    workerRef.current = null;
+    setIsSplitting(false);
+    setProgress(null);
+    setDownloadUrl((current) => {
+      if (current) URL.revokeObjectURL(current);
+      return null;
+    });
+    setAutoSplitQueued(false);
+  }, []);
+
   const handleFile = useCallback(async (file: File) => {
     setError(null);
     setDetection(null);
@@ -107,6 +119,7 @@ export function App() {
   const handleDetection = useCallback((result: DetectionResult, requestedByUser: boolean) => {
     setDetection(result);
     if (settings.cropMode === "single-slide-page") {
+      invalidateOutput();
       setSettings((current) =>
         current.cropMode === "single-slide-page"
           ? {
@@ -119,6 +132,7 @@ export function App() {
     }
 
     if (requestedByUser) {
+      invalidateOutput();
       setSettings((current) => ({
         ...current,
         cropMode: "auto-detect",
@@ -135,15 +149,16 @@ export function App() {
           }
         : current,
     );
-  }, [settings.cropMode]);
+  }, [invalidateOutput, settings.cropMode]);
 
   const handleTemplateChange = useCallback((template: CropTemplate) => {
+    invalidateOutput();
     setSettings((current) => ({
       ...current,
       cropMode: "manual",
       manualCropTemplate: template,
     }));
-  }, []);
+  }, [invalidateOutput]);
 
   const splitPdf = useCallback(() => {
     if (!fileBuffer || pageRangeError) return;
@@ -243,6 +258,7 @@ export function App() {
             downloadUrl={downloadUrl}
             outputName={outputName}
             onSettingsChange={(next) => {
+              invalidateOutput();
               setSettings(next);
               setDetection((current) =>
                 next.cropMode === "manual" ||
