@@ -155,8 +155,11 @@ export function App() {
     invalidateOutput();
     setSettings((current) => ({
       ...current,
-      cropMode: "manual",
-      manualCropTemplate: template,
+      ...(current.cropMode === "powerpoint-2up-preset" || current.cropMode === "single-slide-page"
+        ? { detectedCropTemplate: template }
+        : current.cropMode === "simple-half-split"
+          ? { cropMode: "manual" as const, manualCropTemplate: template }
+          : { manualCropTemplate: template }),
     }));
   }, [invalidateOutput]);
 

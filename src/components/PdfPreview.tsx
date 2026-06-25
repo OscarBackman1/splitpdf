@@ -161,8 +161,6 @@ export function PdfPreview({
     ];
   }, [pageSize, settings.cropMode, template]);
 
-  const isManual = settings.cropMode === "manual";
-
   return (
     <section className="preview-area">
       <div className="preview-main">
@@ -176,11 +174,11 @@ export function PdfPreview({
               {pageSize && template && (
                 <svg
                   ref={overlayRef}
-                  className={`crop-overlay ${isManual ? "is-editable" : ""}`}
+                  className="crop-overlay is-editable"
                   viewBox={`0 0 ${pageSize.width} ${pageSize.height}`}
                   preserveAspectRatio="none"
                   onPointerMove={(event) => {
-                    if (!drag || !template || !isManual) return;
+                    if (!drag || !template) return;
                     const point = svgPoint(event, overlayRef.current);
                     if (!point) return;
                     const dx = point.x - drag.startX;
@@ -200,7 +198,6 @@ export function PdfPreview({
                         width={box.right - box.left}
                         height={box.top - box.bottom}
                         onPointerDown={(event) => {
-                          if (!isManual) return;
                           const point = svgPoint(event, overlayRef.current);
                           if (!point) return;
                           event.currentTarget.setPointerCapture(event.pointerId);
@@ -210,22 +207,21 @@ export function PdfPreview({
                       <text x={box.left + 8} y={pageSize.height - box.top + 22}>
                         {label}
                       </text>
-                      {isManual &&
-                        (["nw", "ne", "sw", "se"] as const).map((handle) => (
-                          <circle
-                            key={handle}
-                            className="crop-handle"
-                            cx={handle.includes("w") ? box.left : box.right}
-                            cy={handle.includes("n") ? pageSize.height - box.top : pageSize.height - box.bottom}
-                            r="7"
-                            onPointerDown={(event) => {
-                              const point = svgPoint(event, overlayRef.current);
-                              if (!point) return;
-                              event.currentTarget.setPointerCapture(event.pointerId);
-                              setDrag({ box: id, mode: handle, startX: point.x, startY: point.y, startBox: box });
-                            }}
-                          />
-                        ))}
+                      {(["nw", "ne", "sw", "se"] as const).map((handle) => (
+                        <circle
+                          key={handle}
+                          className="crop-handle"
+                          cx={handle.includes("w") ? box.left : box.right}
+                          cy={handle.includes("n") ? pageSize.height - box.top : pageSize.height - box.bottom}
+                          r="7"
+                          onPointerDown={(event) => {
+                            const point = svgPoint(event, overlayRef.current);
+                            if (!point) return;
+                            event.currentTarget.setPointerCapture(event.pointerId);
+                            setDrag({ box: id, mode: handle, startX: point.x, startY: point.y, startBox: box });
+                          }}
+                        />
+                      ))}
                     </g>
                   ))}
                 </svg>
