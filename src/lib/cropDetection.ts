@@ -11,6 +11,8 @@ import type {
 const WHITE_THRESHOLD = 246;
 const MIN_INK_ALPHA = 12;
 
+type CanvasRect = { x: number; y: number; width: number; height: number };
+
 export function aspectRatioValue(
   ratio: SlideAspectRatio,
   customAspectRatio?: number,
@@ -125,7 +127,10 @@ export function slideFrameTemplate(
         ];
 
   const boxes = halfRects.map((rect) => detectOneBox(image, rect, ratio));
-  if (!boxes[0].frame || !boxes[1].frame) return null;
+  if (!boxes[0].frame || !boxes[1].frame) {
+    const bandResult = slideBandTemplate(image, canvas, page, layout);
+    return bandResult?.confidence === "low" ? null : bandResult;
+  }
 
   return {
     template: normalizeFrameTemplateToLayout(
@@ -175,6 +180,10 @@ export function detectTemplateFromCanvas(
       : aspectRatioValue(ratioKind, customAspectRatio);
 
   const boxes = halfRects.map((rect) => detectOneBox(image, rect, ratio));
+  const bandResult =
+    boxes[0].frame && boxes[1].frame ? null : slideBandTemplate(image, canvas, page, layout);
+  if (bandResult && bandResult.confidence !== "low") return bandResult;
+
   const rawTemplate = {
     first: canvasRectToPdfBox(boxes[0].rect, canvas, page),
     second: canvasRectToPdfBox(boxes[1].rect, canvas, page),
@@ -207,6 +216,166 @@ export function detectTemplateFromCanvas(
     confidence: "low",
     message: "Detection uncertain - adjust crop boxes manually",
   };
+}
+
+function slideBandTemplate(
+  image: ImageData,
+  canvas: HTMLCanvasElement,
+  page: PageSize,
+  layout: SplitLayout,
+): DetectionResult | null {
+  const pair = detectSlideBandRects(image, layout);
+  if (!pair) return null;
+
+  const rawTemplate = {
+    first: canvasRectToPdfBox(pair.rects[0], canvas, page),
+    second: canvasRectToPdfBox(pair.rects[1], canvas, page),
+  };
+  const confidence = pair.score > 0.76 ? "high" : pair.score > 0.58 ? "medium" : "low";
+
+  return {
+    template: normalizeTemplateToLayout(rawTemplate, page, layout),
+    confidence,
+    message:
+      confidence === "high"
+        ? "Detected embedded slide images with high confidence"
+        : "Detected embedded slide images with medium confidence",
+  };
+}
+
+function detectSlideBandRects(
+  image: ImageData,
+  layout: SplitLayout,
+): { rects: [CanvasRect, CanvasRect]; score: number } | null {
+  const vertical = layout === "top-bottom";
+  const primarySize = vertical ? image.height : image.width;
+  const crossSize = vertical ? image.width : image.height;
+  const projection = new Array(primarySize).fill(0) as number[];
+
+  for (let primary = 0; primary < primarySize; primary += 1) {
+    for (let cross = 0; cross < crossSize; cross += 1) {
+      const x = vertical ? cross : primary;
+      const y = vertical ? primary : cross;
+      if (isInk(image, x, y)) projection[primary] += 1;
+    }
+  }
+
+  const threshold = Math.max(14, Math.floor(crossSize * 0.035));
+  const maxGap = Math.max(8, Math.min(42, Math.floor(primarySize * 0.028)));
+  const minLength = Math.max(40, Math.floor(primarySize * 0.12));
+  const runs = projectionRuns(projection, threshold, maxGap)
+    .filter((run) => run.end - run.start >= minLength)
+    .map((run) => ({
+      ...run,
+      strength: projection.slice(run.start, run.end).reduce((sum, count) => sum + count, 0),
+    }))
+    .sort((a, b) => b.strength - a.strength)
+    .slice(0, 4)
+    .sort((a, b) => a.start - b.start);
+
+  if (runs.length < 2) return null;
+
+  let best: { rects: [CanvasRect, CanvasRect]; score: number } | null = null;
+
+  for (let firstIndex = 0; firstIndex < runs.length - 1; firstIndex += 1) {
+    for (let secondIndex = firstIndex + 1; secondIndex < runs.length; secondIndex += 1) {
+      const first = rectForBand(image, runs[firstIndex], layout);
+      const second = rectForBand(image, runs[secondIndex], layout);
+      if (!first || !second) continue;
+
+      const firstCross = vertical ? first.width : first.height;
+      const secondCross = vertical ? second.width : second.height;
+      const firstPrimary = vertical ? first.height : first.width;
+      const secondPrimary = vertical ? second.height : second.width;
+      const crossConsistency =
+        1 - Math.abs(firstCross - secondCross) / Math.max(firstCross, secondCross, 1);
+      const primaryConsistency =
+        1 - Math.abs(firstPrimary - secondPrimary) / Math.max(firstPrimary, secondPrimary, 1);
+      const crossCoverage = Math.min(firstCross, secondCross) / crossSize;
+      const primaryCoverage = (firstPrimary + secondPrimary) / primarySize;
+      const score =
+        crossConsistency * 0.34 +
+        primaryConsistency * 0.24 +
+        Math.min(1, crossCoverage / 0.58) * 0.24 +
+        Math.min(1, primaryCoverage / 0.54) * 0.18;
+
+      if (!best || score > best.score) {
+        best = { rects: [first, second], score };
+      }
+    }
+  }
+
+  if (!best || best.score < 0.5) return null;
+  return best;
+}
+
+function rectForBand(
+  image: ImageData,
+  run: { start: number; end: number },
+  layout: SplitLayout,
+): CanvasRect | null {
+  const vertical = layout === "top-bottom";
+  const primaryStart = run.start;
+  const primaryEnd = run.end;
+  const primaryLength = primaryEnd - primaryStart;
+  const crossSize = vertical ? image.width : image.height;
+  const crossCounts = new Array(crossSize).fill(0) as number[];
+
+  for (let primary = primaryStart; primary < primaryEnd; primary += 1) {
+    for (let cross = 0; cross < crossSize; cross += 1) {
+      const x = vertical ? cross : primary;
+      const y = vertical ? primary : cross;
+      if (isInk(image, x, y)) crossCounts[cross] += 1;
+    }
+  }
+
+  const threshold = Math.max(8, Math.floor(primaryLength * 0.025));
+  const crossRange = qualifiedRange(crossCounts, threshold);
+  if (!crossRange) return null;
+
+  const pad = Math.max(3, Math.min(image.width, image.height) * 0.004);
+  if (vertical) {
+    const x = Math.max(0, crossRange.start - pad);
+    const y = Math.max(0, primaryStart - pad);
+    const right = Math.min(image.width, crossRange.end + pad);
+    const bottom = Math.min(image.height, primaryEnd + pad);
+    return { x, y, width: right - x, height: bottom - y };
+  }
+
+  const x = Math.max(0, primaryStart - pad);
+  const y = Math.max(0, crossRange.start - pad);
+  const right = Math.min(image.width, primaryEnd + pad);
+  const bottom = Math.min(image.height, crossRange.end + pad);
+  return { x, y, width: right - x, height: bottom - y };
+}
+
+function projectionRuns(counts: number[], threshold: number, maxGap: number) {
+  const runs: Array<{ start: number; end: number }> = [];
+  let start = -1;
+  let lastQualified = -1;
+  let gap = 0;
+
+  for (let index = 0; index <= counts.length; index += 1) {
+    const count = counts[index] ?? 0;
+    if (count >= threshold) {
+      if (start === -1) start = index;
+      lastQualified = index + 1;
+      gap = 0;
+      continue;
+    }
+
+    if (start !== -1) {
+      gap += 1;
+      if (gap > maxGap || index === counts.length) {
+        runs.push({ start, end: lastQualified });
+        start = -1;
+        lastQualified = -1;
+        gap = 0;
+      }
+    }
+  }
+
+  return runs;
 }
 
 export function applyAdjustments(
@@ -325,7 +494,7 @@ export function validateBox(box: ManualCropBox) {
 
 function detectOneBox(
   image: ImageData,
-  region: { x: number; y: number; width: number; height: number },
+  region: CanvasRect,
   ratio: number,
 ) {
   const frame = framedSlideBounds(image, region, ratio);
@@ -341,7 +510,7 @@ function detectOneBox(
 
 function framedSlideBounds(
   image: ImageData,
-  region: { x: number; y: number; width: number; height: number },
+  region: CanvasRect,
   expectedRatio: number,
 ) {
   const left = Math.max(0, Math.floor(region.x));
@@ -453,7 +622,7 @@ function ruleRuns(counts: number[], threshold: number) {
 
 function projectedInkBounds(
   image: ImageData,
-  region: { x: number; y: number; width: number; height: number },
+  region: CanvasRect,
 ) {
   const left = Math.max(0, Math.floor(region.x));
   const top = Math.max(0, Math.floor(region.y));
@@ -516,7 +685,7 @@ function qualifiedRange(counts: number[], threshold: number) {
 
 function inkBounds(
   image: ImageData,
-  region: { x: number; y: number; width: number; height: number },
+  region: CanvasRect,
 ) {
   let minX = region.x + region.width;
   let minY = region.y + region.height;
@@ -570,7 +739,7 @@ function isDarkRulePixel(image: ImageData, x: number, y: number) {
 }
 
 function fitRatio(
-  rect: { x: number; y: number; width: number; height: number },
+  rect: CanvasRect,
   ratio: number,
 ) {
   const current = rect.width / rect.height;
@@ -584,7 +753,7 @@ function fitRatio(
 }
 
 function rectToPdfBox(
-  rect: { x: number; y: number; width: number; height: number },
+  rect: CanvasRect,
   pageHeight: number,
 ): ManualCropBox {
   return {
@@ -596,7 +765,7 @@ function rectToPdfBox(
 }
 
 function canvasRectToPdfBox(
-  rect: { x: number; y: number; width: number; height: number },
+  rect: CanvasRect,
   canvas: HTMLCanvasElement,
   page: PageSize,
 ): ManualCropBox {
