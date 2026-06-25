@@ -157,18 +157,20 @@ export function SettingsPanel({
             </>
           )}
 
-          <label className="checkbox-line">
+          <label>
+            Keep first pages unsplit
             <input
-              type="checkbox"
-              checked={settings.keepFirstPageUnsplit}
+              type="number"
+              min="0"
+              step="1"
+              value={settings.keepFirstPagesUnsplit}
               onChange={(event) =>
                 patch({
-                  keepFirstPageUnsplit: event.target.checked,
+                  keepFirstPagesUnsplit: coerceNonNegativeInteger(Number(event.target.value)),
                   detectedCropTemplate: undefined,
                 })
               }
             />
-            Keep first page unsplit
           </label>
 
           <label>
@@ -221,4 +223,8 @@ function Status({
 
 function normalizeOrder(layout: SplitSettings["layout"]): SplitOrder {
   return layout === "top-bottom" ? "top-bottom" : "left-right";
+}
+
+function coerceNonNegativeInteger(value: number) {
+  return Number.isFinite(value) ? Math.max(0, Math.floor(value)) : 0;
 }

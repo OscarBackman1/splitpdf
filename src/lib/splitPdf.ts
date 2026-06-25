@@ -34,6 +34,7 @@ export async function splitTwoUpPdf(
     const output = await PDFDocument.create();
     const selectedPages = parsePageRange(settings.pageSelection, source.getPageCount());
     const totalPages = selectedPages.length;
+    const keepFirstPagesUnsplit = coerceNonNegativeInteger(settings.keepFirstPagesUnsplit);
 
     for (const [index, pageIndex] of selectedPages.entries()) {
       if (signal?.aborted) {
@@ -43,7 +44,7 @@ export async function splitTwoUpPdf(
       const sourcePage = source.getPage(pageIndex);
       const { width, height } = sourcePage.getSize();
 
-      if (settings.keepFirstPageUnsplit && pageIndex === 0) {
+      if (pageIndex < keepFirstPagesUnsplit) {
         const [copied] = await output.copyPages(source, [pageIndex]);
         output.addPage(copied);
       } else {
@@ -94,6 +95,10 @@ function baseTemplate(page: { width: number; height: number }, settings: SplitSe
     settings.detectedCropTemplate ??
     powerpointHandoutTemplate(page, settings.layout, DEFAULT_SLIDE_RATIO)
   );
+}
+
+function coerceNonNegativeInteger(value: number) {
+  return Number.isFinite(value) ? Math.max(0, Math.floor(value)) : 0;
 }
 
 function normalizePdfError(error: unknown) {

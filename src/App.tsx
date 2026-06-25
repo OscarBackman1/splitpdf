@@ -49,7 +49,9 @@ export function App() {
   }, [fileBuffer, pageCount, settings.pageSelection]);
 
   const outputName = ensurePdfExtension(settings.outputName || defaultOutputName(fileName || "split_slides.pdf"));
-  const previewPageNumber = settings.keepFirstPageUnsplit && pageCount > 1 ? 2 : 1;
+  const keepFirstPagesUnsplit = coerceNonNegativeInteger(settings.keepFirstPagesUnsplit);
+  const previewPageNumber =
+    pageCount > 0 ? Math.min(keepFirstPagesUnsplit + 1, pageCount) : 1;
 
   const displayedTemplate = useMemo<CropTemplate | null>(() => {
     if (!pageSize) return null;
@@ -239,7 +241,7 @@ export function App() {
             outputName={outputName}
             onSettingsChange={(next) => {
               const previewPageWillChange =
-                next.keepFirstPageUnsplit !== settings.keepFirstPageUnsplit && pageCount > 1;
+                next.keepFirstPagesUnsplit !== settings.keepFirstPagesUnsplit && pageCount > 1;
               invalidateOutput();
               if (previewPageWillChange) {
                 setPageSize(null);
@@ -264,4 +266,8 @@ export function App() {
       )}
     </main>
   );
+}
+
+function coerceNonNegativeInteger(value: number) {
+  return Number.isFinite(value) ? Math.max(0, Math.floor(value)) : 0;
 }

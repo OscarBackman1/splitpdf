@@ -125,7 +125,7 @@ describe("splitTwoUpPdf", () => {
     const output = await splitTwoUpPdf(input.buffer.slice(0), {
       ...defaultSettings,
       cropMode: "powerpoint-2up-preset",
-      keepFirstPageUnsplit: true,
+      keepFirstPagesUnsplit: 1,
     });
 
     const split = await PDFDocument.load(output);
@@ -133,6 +133,28 @@ describe("splitTwoUpPdf", () => {
     expect(split.getPage(0).getWidth()).toBeCloseTo(612);
     expect(split.getPage(0).getHeight()).toBeCloseTo(792);
     expect(split.getPage(1).getWidth()).toBeCloseTo(480);
+  });
+
+  it("keeps multiple first source pages unsplit when requested", async () => {
+    const source = await PDFDocument.create();
+    for (let index = 0; index < 4; index += 1) {
+      const page = source.addPage([612, 792]);
+      page.drawText(index < 3 ? `Disclaimer ${index + 1}` : "Slides", { x: 72, y: 700, size: 24 });
+    }
+
+    const input = await source.save();
+    const output = await splitTwoUpPdf(input.buffer.slice(0), {
+      ...defaultSettings,
+      cropMode: "powerpoint-2up-preset",
+      keepFirstPagesUnsplit: 3,
+    });
+
+    const split = await PDFDocument.load(output);
+    expect(split.getPageCount()).toBe(5);
+    expect(split.getPage(0).getWidth()).toBeCloseTo(612);
+    expect(split.getPage(1).getWidth()).toBeCloseTo(612);
+    expect(split.getPage(2).getWidth()).toBeCloseTo(612);
+    expect(split.getPage(3).getWidth()).toBeCloseTo(480);
   });
 
   it("crops one slide per source page in single-slide mode", async () => {

@@ -34,7 +34,7 @@ export interface SplitSettings {
   order: SplitOrder;
   cropMode: CropMode;
   gutter: number;
-  keepFirstPageUnsplit: boolean;
+  keepFirstPagesUnsplit: number;
   pageSelection: string;
   detectedCropTemplate?: CropTemplate;
   outputName?: string;
@@ -61,6 +61,6 @@ export const defaultSettings: SplitSettings = {
   order: "top-bottom",
   cropMode: "powerpoint-2up-preset",
   gutter: 0,
-  keepFirstPageUnsplit: false,
+  keepFirstPagesUnsplit: 0,
   pageSelection: "all",
 };
