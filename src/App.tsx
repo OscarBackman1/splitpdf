@@ -106,6 +106,18 @@ export function App() {
 
   const handleDetection = useCallback((result: DetectionResult, requestedByUser: boolean) => {
     setDetection(result);
+    if (settings.cropMode === "single-slide-page") {
+      setSettings((current) =>
+        current.cropMode === "single-slide-page"
+          ? {
+              ...current,
+              detectedCropTemplate: result.template,
+            }
+          : current,
+      );
+      return;
+    }
+
     if (requestedByUser) {
       setSettings((current) => ({
         ...current,
@@ -123,7 +135,7 @@ export function App() {
           }
         : current,
     );
-  }, []);
+  }, [settings.cropMode]);
 
   const handleTemplateChange = useCallback((template: CropTemplate) => {
     setSettings((current) => ({
@@ -233,7 +245,11 @@ export function App() {
             onSettingsChange={(next) => {
               setSettings(next);
               setDetection((current) =>
-                next.cropMode === "manual" || next.cropMode === "auto-detect" ? current : null,
+                next.cropMode === "manual" ||
+                next.cropMode === "auto-detect" ||
+                next.cropMode === "single-slide-page"
+                  ? current
+                  : null,
               );
             }}
             onDetect={() => setDetectionRequest((count) => count + 1)}

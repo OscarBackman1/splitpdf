@@ -2,6 +2,7 @@ import { PDFDocument } from "pdf-lib";
 import {
   applyAdjustments,
   aspectRatioValue,
+  fullPageTemplate,
   orderBoxes,
   powerpointHandoutTemplate,
   presetTemplate,
@@ -42,12 +43,15 @@ export async function splitTwoUpPdf(
       const sourcePage = source.getPage(pageIndex);
       const { width, height } = sourcePage.getSize();
 
-      if (settings.keepFirstPageUnsplit && pageIndex === 0) {
+      if (settings.cropMode !== "single-slide-page" && settings.keepFirstPageUnsplit && pageIndex === 0) {
         const [copied] = await output.copyPages(source, [pageIndex]);
         output.addPage(copied);
       } else {
         const template = computeTemplate({ width, height }, settings);
-        const boxes = orderBoxes(template, settings.order);
+        const boxes =
+          settings.cropMode === "single-slide-page"
+            ? [template.first]
+            : orderBoxes(template, settings.order);
 
         for (const box of boxes) {
           validateBox(box);
@@ -75,26 +79,44 @@ export function computeTemplate(
   page: { width: number; height: number },
   settings: SplitSettings,
 ): CropTemplate {
-  const base =
+  const base = baseTemplate(page, settings);
+
+  const gutter = settings.cropMode === "single-slide-page" ? 0 : settings.gutter;
+  return applyAdjustments(base, page, settings.layout, gutter, settings.margins);
+}
+
+function baseTemplate(page: { width: number; height: number }, settings: SplitSettings) {
+  if (settings.cropMode === "single-slide-page") {
+    return settings.detectedCropTemplate ?? fullPageTemplate(page);
+  }
+
+  if (
     (settings.cropMode === "manual" || settings.cropMode === "auto-detect") &&
     settings.manualCropTemplate
-      ? settings.manualCropTemplate
-      : settings.cropMode === "simple-half-split"
-        ? simpleHalfTemplate(page, settings.layout)
-        : settings.cropMode === "powerpoint-2up-preset"
-          ? settings.detectedCropTemplate ??
-            powerpointHandoutTemplate(
-              page,
-              settings.layout,
-              aspectRatioValue(settings.slideAspectRatio, settings.customAspectRatio),
-            )
-        : presetTemplate(
-            page,
-            settings.layout,
-            aspectRatioValue(settings.slideAspectRatio, settings.customAspectRatio),
-          );
+  ) {
+    return settings.manualCropTemplate;
+  }
 
-  return applyAdjustments(base, page, settings.layout, settings.gutter, settings.margins);
+  if (settings.cropMode === "simple-half-split") {
+    return simpleHalfTemplate(page, settings.layout);
+  }
+
+  if (settings.cropMode === "powerpoint-2up-preset") {
+    return (
+      settings.detectedCropTemplate ??
+      powerpointHandoutTemplate(
+        page,
+        settings.layout,
+        aspectRatioValue(settings.slideAspectRatio, settings.customAspectRatio),
+      )
+    );
+  }
+
+  return presetTemplate(
+    page,
+    settings.layout,
+    aspectRatioValue(settings.slideAspectRatio, settings.customAspectRatio),
+  );
 }
 
 function normalizePdfError(error: unknown) {

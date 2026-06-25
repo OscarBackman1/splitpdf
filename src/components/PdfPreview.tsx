@@ -1,6 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { PointerEvent as ReactPointerEvent } from "react";
-import { aspectRatioValue, detectTemplateFromCanvas, slideFrameTemplate } from "../lib/cropDetection";
+import {
+  aspectRatioValue,
+  detectTemplateFromCanvas,
+  singleSlideTemplate,
+  slideFrameTemplate,
+} from "../lib/cropDetection";
 import { pdfjsLib } from "../lib/pdfjs";
 import type { CropTemplate, DetectionResult, ManualCropBox, PageSize, SplitSettings } from "../lib/types";
 
@@ -88,6 +93,11 @@ export function PdfPreview({
 
   useEffect(() => {
     if (!canvasRef.current || !pageSize || renderVersion === 0) return;
+    if (settings.cropMode === "single-slide-page") {
+      const result = singleSlideTemplate(canvasRef.current, pageSize);
+      onDetection(result, false);
+      return;
+    }
     if (settings.cropMode === "powerpoint-2up-preset") {
       const result = slideFrameTemplate(
         canvasRef.current,
@@ -119,18 +129,22 @@ export function PdfPreview({
 
   useEffect(() => {
     if (!canvasRef.current || !pageSize || detectionRequest === 0) return;
-    const result = detectTemplateFromCanvas(
-      canvasRef.current,
-      pageSize,
-      settings.layout,
-      settings.slideAspectRatio,
-      settings.customAspectRatio,
-    );
+    const result =
+      settings.cropMode === "single-slide-page"
+        ? singleSlideTemplate(canvasRef.current, pageSize)
+        : detectTemplateFromCanvas(
+            canvasRef.current,
+            pageSize,
+            settings.layout,
+            settings.slideAspectRatio,
+            settings.customAspectRatio,
+          );
     onDetection(result, true);
   }, [
     detectionRequest,
     onDetection,
     pageSize,
+    settings.cropMode,
     settings.customAspectRatio,
     settings.layout,
     settings.slideAspectRatio,
@@ -138,11 +152,14 @@ export function PdfPreview({
 
   const boxes = useMemo(() => {
     if (!template || !pageSize) return [];
+    if (settings.cropMode === "single-slide-page") {
+      return [{ id: "first" as const, label: "Slide", box: template.first }];
+    }
     return [
       { id: "first" as const, label: "Slide 1", box: template.first },
       { id: "second" as const, label: "Slide 2", box: template.second },
     ];
-  }, [pageSize, template]);
+  }, [pageSize, settings.cropMode, template]);
 
   const isManual = settings.cropMode === "manual";
 
@@ -225,16 +242,18 @@ export function PdfPreview({
               source={canvasRef.current}
               pageSize={pageSize}
               box={template.first}
-              label="Slide 1 preview"
+              label={settings.cropMode === "single-slide-page" ? "Slide preview" : "Slide 1 preview"}
               renderVersion={renderVersion}
             />
-            <CropThumbnail
-              source={canvasRef.current}
-              pageSize={pageSize}
-              box={template.second}
-              label="Slide 2 preview"
-              renderVersion={renderVersion}
-            />
+            {settings.cropMode !== "single-slide-page" && (
+              <CropThumbnail
+                source={canvasRef.current}
+                pageSize={pageSize}
+                box={template.second}
+                label="Slide 2 preview"
+                renderVersion={renderVersion}
+              />
+            )}
           </>
         ) : (
           <p className="empty-note">Upload a PDF to see extracted slide previews.</p>

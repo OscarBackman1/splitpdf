@@ -36,6 +36,7 @@ export function SettingsPanel({
   const patch = (next: Partial<SplitSettings>) => onSettingsChange({ ...settings, ...next });
   const patchMargins = (next: Partial<Margins>) =>
     patch({ margins: { ...settings.margins, ...next } });
+  const isSingleSlideMode = settings.cropMode === "single-slide-page";
 
   return (
     <aside className="settings-panel">
@@ -84,10 +85,17 @@ export function SettingsPanel({
             <select
               value={settings.cropMode}
               onChange={(event) =>
-                patch({ cropMode: event.target.value as SplitSettings["cropMode"] })
+                patch({
+                  cropMode: event.target.value as SplitSettings["cropMode"],
+                  detectedCropTemplate: undefined,
+                  manualCropTemplate: undefined,
+                  gutter: 0,
+                  keepFirstPageUnsplit: false,
+                })
               }
             >
               <option value="powerpoint-2up-preset">PowerPoint 2-slide handout</option>
+              <option value="single-slide-page">One slide per page</option>
               <option value="auto-detect">Auto-detect slide boxes</option>
               <option value="manual">Manual crop</option>
               <option value="simple-half-split">Simple half split</option>
@@ -124,63 +132,76 @@ export function SettingsPanel({
             </label>
           </div>
 
-          <div className="segmented">
-            <span>Layout</span>
-            <button
-              className={settings.layout === "top-bottom" ? "is-active" : ""}
-              type="button"
-              onClick={() => patch({ layout: "top-bottom", order: normalizeOrder("top-bottom") })}
-            >
-              Top / bottom
-            </button>
-            <button
-              className={settings.layout === "left-right" ? "is-active" : ""}
-              type="button"
-              onClick={() => patch({ layout: "left-right", order: normalizeOrder("left-right") })}
-            >
-              Left / right
-            </button>
-          </div>
+          {!isSingleSlideMode && (
+            <>
+              <div className="segmented">
+                <span>Layout</span>
+                <button
+                  className={settings.layout === "top-bottom" ? "is-active" : ""}
+                  type="button"
+                  onClick={() => patch({ layout: "top-bottom", order: normalizeOrder("top-bottom") })}
+                >
+                  Top / bottom
+                </button>
+                <button
+                  className={settings.layout === "left-right" ? "is-active" : ""}
+                  type="button"
+                  onClick={() => patch({ layout: "left-right", order: normalizeOrder("left-right") })}
+                >
+                  Left / right
+                </button>
+              </div>
 
-          <label>
-            Output order
-            <select
-              value={settings.order}
-              onChange={(event) => patch({ order: event.target.value as SplitOrder })}
-            >
-              {settings.layout === "top-bottom" ? (
-                <>
-                  <option value="top-bottom">Top then bottom</option>
-                  <option value="bottom-top">Bottom then top</option>
-                </>
-              ) : (
-                <>
-                  <option value="left-right">Left then right</option>
-                  <option value="right-left">Right then left</option>
-                </>
-              )}
-            </select>
-          </label>
+              <label>
+                Output order
+                <select
+                  value={settings.order}
+                  onChange={(event) => patch({ order: event.target.value as SplitOrder })}
+                >
+                  {settings.layout === "top-bottom" ? (
+                    <>
+                      <option value="top-bottom">Top then bottom</option>
+                      <option value="bottom-top">Bottom then top</option>
+                    </>
+                  ) : (
+                    <>
+                      <option value="left-right">Left then right</option>
+                      <option value="right-left">Right then left</option>
+                    </>
+                  )}
+                </select>
+              </label>
 
-          <div className="range-field">
-            <label htmlFor="gutter">Gutter removal</label>
-            <div>
-              <input
-                id="gutter"
-                type="range"
-                min="0"
-                max="80"
-                value={settings.gutter}
-                onChange={(event) => patch({ gutter: Number(event.target.value) })}
-              />
-              <input
-                type="number"
-                min="0"
-                value={settings.gutter}
-                onChange={(event) => patch({ gutter: Number(event.target.value) })}
-              />
-            </div>
-          </div>
+              <div className="range-field">
+                <label htmlFor="gutter">Gutter removal</label>
+                <div>
+                  <input
+                    id="gutter"
+                    type="range"
+                    min="0"
+                    max="80"
+                    value={settings.gutter}
+                    onChange={(event) => patch({ gutter: Number(event.target.value) })}
+                  />
+                  <input
+                    type="number"
+                    min="0"
+                    value={settings.gutter}
+                    onChange={(event) => patch({ gutter: Number(event.target.value) })}
+                  />
+                </div>
+              </div>
+
+              <label className="checkbox-line">
+                <input
+                  type="checkbox"
+                  checked={settings.keepFirstPageUnsplit}
+                  onChange={(event) => patch({ keepFirstPageUnsplit: event.target.checked })}
+                />
+                Keep first page unsplit
+              </label>
+            </>
+          )}
 
           <fieldset>
             <legend>Outer margin trim</legend>
@@ -207,15 +228,6 @@ export function SettingsPanel({
               />
             </div>
           </fieldset>
-
-          <label className="checkbox-line">
-            <input
-              type="checkbox"
-              checked={settings.keepFirstPageUnsplit}
-              onChange={(event) => patch({ keepFirstPageUnsplit: event.target.checked })}
-            />
-            Keep first page unsplit
-          </label>
 
           <label>
             Page range

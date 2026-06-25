@@ -116,4 +116,28 @@ describe("splitTwoUpPdf", () => {
     expect(split.getPage(0).getWidth()).toBeCloseTo(468);
     expect(split.getPage(0).getHeight()).toBeCloseTo(263.25);
   });
+
+  it("crops one slide per source page in single-slide mode", async () => {
+    const source = await PDFDocument.create();
+    const first = source.addPage([612, 792]);
+    const second = source.addPage([612, 792]);
+    first.drawText("Single slide 1", { x: 120, y: 520, size: 24 });
+    second.drawText("Single slide 2", { x: 120, y: 520, size: 24 });
+
+    const input = await source.save();
+    const output = await splitTwoUpPdf(input.buffer.slice(0), {
+      ...defaultSettings,
+      cropMode: "single-slide-page",
+      detectedCropTemplate: {
+        first: { left: 96, bottom: 210, right: 516, top: 570 },
+        second: { left: 96, bottom: 210, right: 516, top: 570 },
+      },
+    });
+
+    const split = await PDFDocument.load(output);
+    expect(split.getPageCount()).toBe(2);
+    expect(split.getPage(0).getWidth()).toBeCloseTo(420);
+    expect(split.getPage(0).getHeight()).toBeCloseTo(360);
+    expect(split.getPage(1).getWidth()).toBeCloseTo(420);
+  });
 });

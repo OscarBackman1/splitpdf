@@ -8,6 +8,7 @@ export type SplitOrder =
 
 export type CropMode =
   | "powerpoint-2up-preset"
+  | "single-slide-page"
   | "auto-detect"
   | "manual"
   | "simple-half-split";

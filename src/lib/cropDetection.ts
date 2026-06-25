@@ -146,6 +146,45 @@ export function slideFrameTemplate(
   };
 }
 
+export function singleSlideTemplate(
+  canvas: HTMLCanvasElement,
+  page: PageSize,
+): DetectionResult {
+  const ctx = canvas.getContext("2d", { willReadFrequently: true });
+  if (!ctx) {
+    const fullPage = fullPageTemplate(page);
+    return {
+      template: fullPage,
+      confidence: "low",
+      message: "Detection uncertain - preview canvas was unavailable.",
+    };
+  }
+
+  const image = ctx.getImageData(0, 0, canvas.width, canvas.height);
+  const fullRegion = { x: 0, y: 0, width: canvas.width, height: canvas.height };
+  const detectedBounds = projectedInkBounds(image, fullRegion) ?? inkBounds(image, fullRegion);
+  const bounds = expandRect(
+    detectedBounds,
+    Math.max(24, Math.min(canvas.width, canvas.height) * 0.03),
+    fullRegion,
+  );
+  const areaShare = (bounds.width * bounds.height) / Math.max(1, canvas.width * canvas.height);
+  const useBounds = bounds.width > canvas.width * 0.2 && bounds.height > canvas.height * 0.2;
+  const box = useBounds
+    ? canvasRectToPdfBox(bounds, canvas, page)
+    : { left: 0, bottom: 0, right: page.width, top: page.height };
+  const confidence = useBounds && areaShare < 0.92 ? "high" : "medium";
+
+  return {
+    template: { first: box, second: box },
+    confidence,
+    message:
+      confidence === "high"
+        ? "Detected one slide per page with high confidence"
+        : "Using the full page as a single slide",
+  };
+}
+
 export function detectTemplateFromCanvas(
   canvas: HTMLCanvasElement,
   page: PageSize,
@@ -216,6 +255,11 @@ export function detectTemplateFromCanvas(
     confidence: "low",
     message: "Detection uncertain - adjust crop boxes manually",
   };
+}
+
+export function fullPageTemplate(page: PageSize): CropTemplate {
+  const box = { left: 0, bottom: 0, right: page.width, top: page.height };
+  return { first: box, second: box };
 }
 
 function slideBandTemplate(
@@ -376,6 +420,14 @@ function projectionRuns(counts: number[], threshold: number, maxGap: number) {
   }
 
   return runs;
+}
+
+function expandRect(rect: CanvasRect, padding: number, limit: CanvasRect): CanvasRect {
+  const x = Math.max(limit.x, rect.x - padding);
+  const y = Math.max(limit.y, rect.y - padding);
+  const right = Math.min(limit.x + limit.width, rect.x + rect.width + padding);
+  const bottom = Math.min(limit.y + limit.height, rect.y + rect.height + padding);
+  return { x, y, width: right - x, height: bottom - y };
 }
 
 export function applyAdjustments(
