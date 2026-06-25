@@ -5,6 +5,7 @@ interface SettingsPanelProps {
   settings: SplitSettings;
   detection: DetectionResult | null;
   pageRangeError: string | null;
+  pageCount: number;
   canSplit: boolean;
   isSplitting: boolean;
   progressLabel: string;
@@ -21,6 +22,7 @@ export function SettingsPanel({
   settings,
   detection,
   pageRangeError,
+  pageCount,
   canSplit,
   isSplitting,
   progressLabel,
@@ -35,6 +37,7 @@ export function SettingsPanel({
   const [advancedOpen, setAdvancedOpen] = useState(false);
   const patch = (next: Partial<SplitSettings>) => onSettingsChange({ ...settings, ...next });
   const isSingleSlideMode = settings.cropMode === "single-slide-page";
+  const firstPagesOptions = Array.from({ length: Math.max(1, pageCount) }, (_, index) => index);
 
   return (
     <aside className="settings-panel">
@@ -159,18 +162,21 @@ export function SettingsPanel({
 
           <label>
             Keep first pages unsplit
-            <input
-              type="number"
-              min="0"
-              step="1"
+            <select
               value={settings.keepFirstPagesUnsplit}
               onChange={(event) =>
                 patch({
-                  keepFirstPagesUnsplit: coerceNonNegativeInteger(Number(event.target.value)),
+                  keepFirstPagesUnsplit: Number(event.target.value),
                   detectedCropTemplate: undefined,
                 })
               }
-            />
+            >
+              {firstPagesOptions.map((count) => (
+                <option key={count} value={count}>
+                  {count === 0 ? "None" : `${count} ${count === 1 ? "page" : "pages"}`}
+                </option>
+              ))}
+            </select>
           </label>
 
           <label>
@@ -223,8 +229,4 @@ function Status({
 
 function normalizeOrder(layout: SplitSettings["layout"]): SplitOrder {
   return layout === "top-bottom" ? "top-bottom" : "left-right";
-}
-
-function coerceNonNegativeInteger(value: number) {
-  return Number.isFinite(value) ? Math.max(0, Math.floor(value)) : 0;
 }

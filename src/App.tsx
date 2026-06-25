@@ -234,6 +234,7 @@ export function App() {
             settings={settings}
             detection={detection}
             pageRangeError={pageRangeError}
+            pageCount={pageCount}
             canSplit={!isSplitting && !pageRangeError}
             isSplitting={isSplitting}
             progressLabel={progressLabel}
