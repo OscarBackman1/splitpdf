@@ -32,7 +32,9 @@ export async function splitTwoUpPdf(
   try {
     const source = await PDFDocument.load(input, { ignoreEncryption: false });
     const output = await PDFDocument.create();
-    const selectedPages = parsePageRange(settings.pageSelection, source.getPageCount());
+    const selectedPages = parsePageRange(settings.pageSelection, source.getPageCount()).filter(
+      (pageIndex) => !(settings.skipFirstPage && pageIndex === 0),
+    );
     const totalPages = selectedPages.length;
 
     for (const [index, pageIndex] of selectedPages.entries()) {
@@ -43,27 +45,22 @@ export async function splitTwoUpPdf(
       const sourcePage = source.getPage(pageIndex);
       const { width, height } = sourcePage.getSize();
 
-      if (settings.cropMode !== "single-slide-page" && settings.keepFirstPageUnsplit && pageIndex === 0) {
-        const [copied] = await output.copyPages(source, [pageIndex]);
-        output.addPage(copied);
-      } else {
-        const template = computeTemplate({ width, height }, settings);
-        const boxes =
-          settings.cropMode === "single-slide-page"
-            ? [template.first]
-            : orderBoxes(template, settings.order);
+      const template = computeTemplate({ width, height }, settings);
+      const boxes =
+        settings.cropMode === "single-slide-page"
+          ? [template.first]
+          : orderBoxes(template, settings.order);
 
-        for (const box of boxes) {
-          validateBox(box);
-          const embedded = await output.embedPage(sourcePage, box);
-          const page = output.addPage([box.right - box.left, box.top - box.bottom]);
-          page.drawPage(embedded, {
-            x: 0,
-            y: 0,
-            width: box.right - box.left,
-            height: box.top - box.bottom,
-          });
-        }
+      for (const box of boxes) {
+        validateBox(box);
+        const embedded = await output.embedPage(sourcePage, box);
+        const page = output.addPage([box.right - box.left, box.top - box.bottom]);
+        page.drawPage(embedded, {
+          x: 0,
+          y: 0,
+          width: box.right - box.left,
+          height: box.top - box.bottom,
+        });
       }
 
       onProgress?.({ currentPage: index + 1, totalPages });

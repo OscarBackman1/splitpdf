@@ -113,6 +113,25 @@ describe("splitTwoUpPdf", () => {
     expect(split.getPage(0).getHeight()).toBeCloseTo(263.25);
   });
 
+  it("skips the first source page when requested", async () => {
+    const source = await PDFDocument.create();
+    const first = source.addPage([612, 792]);
+    const second = source.addPage([612, 792]);
+    first.drawText("Disclaimer", { x: 72, y: 700, size: 24 });
+    second.drawText("Top slide", { x: 72, y: 700, size: 24 });
+    second.drawText("Bottom slide", { x: 72, y: 320, size: 24 });
+
+    const input = await source.save();
+    const output = await splitTwoUpPdf(input.buffer.slice(0), {
+      ...defaultSettings,
+      cropMode: "powerpoint-2up-preset",
+      skipFirstPage: true,
+    });
+
+    const split = await PDFDocument.load(output);
+    expect(split.getPageCount()).toBe(2);
+  });
+
   it("crops one slide per source page in single-slide mode", async () => {
     const source = await PDFDocument.create();
     const first = source.addPage([612, 792]);

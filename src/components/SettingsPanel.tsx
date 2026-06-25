@@ -87,7 +87,6 @@ export function SettingsPanel({
                   cropMode: event.target.value as SplitSettings["cropMode"],
                   detectedCropTemplate: undefined,
                   gutter: 0,
-                  keepFirstPageUnsplit: false,
                 })
               }
             >
@@ -155,17 +154,17 @@ export function SettingsPanel({
                   />
                 </div>
               </div>
-
-              <label className="checkbox-line">
-                <input
-                  type="checkbox"
-                  checked={settings.keepFirstPageUnsplit}
-                  onChange={(event) => patch({ keepFirstPageUnsplit: event.target.checked })}
-                />
-                Keep first page unsplit
-              </label>
             </>
           )}
+
+          <label className="checkbox-line">
+            <input
+              type="checkbox"
+              checked={settings.skipFirstPage}
+              onChange={(event) => patch({ skipFirstPage: event.target.checked })}
+            />
+            Skip first page
+          </label>
 
           <label>
             Page range
