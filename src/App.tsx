@@ -118,13 +118,14 @@ export function App() {
 
   const handleDetection = useCallback((result: DetectionResult, requestedByUser: boolean) => {
     setDetection(result);
-    if (settings.cropMode === "single-slide-page") {
+    if (settings.cropMode === "single-slide-page" || settings.cropMode === "per-page-2up-auto") {
       invalidateOutput();
       setSettings((current) =>
-        current.cropMode === "single-slide-page"
+        current.cropMode === settings.cropMode
           ? {
               ...current,
               detectedCropTemplate: result.template,
+              perPageCropTemplates: undefined,
             }
           : current,
       );
@@ -263,7 +264,8 @@ export function App() {
               setDetection((current) =>
                 next.cropMode === "manual" ||
                 next.cropMode === "auto-detect" ||
-                next.cropMode === "single-slide-page"
+                next.cropMode === "single-slide-page" ||
+                next.cropMode === "per-page-2up-auto"
                   ? current
                   : null,
               );

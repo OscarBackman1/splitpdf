@@ -108,7 +108,7 @@ export function PdfPreview({
       if (result) onDetection(result, false);
       return;
     }
-    if (settings.cropMode !== "auto-detect") return;
+    if (settings.cropMode !== "auto-detect" && settings.cropMode !== "per-page-2up-auto") return;
     const result = detectTemplateFromCanvas(
       canvasRef.current,
       pageSize,

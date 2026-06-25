@@ -12,6 +12,7 @@ const WHITE_THRESHOLD = 246;
 const MIN_INK_ALPHA = 12;
 
 type CanvasRect = { x: number; y: number; width: number; height: number };
+type CanvasSize = { width: number; height: number };
 
 export function aspectRatioValue(
   ratio: SlideAspectRatio,
@@ -202,15 +203,33 @@ export function detectTemplateFromCanvas(
   }
 
   const image = ctx.getImageData(0, 0, canvas.width, canvas.height);
+  return detectTemplateFromImageData(
+    image,
+    canvas,
+    page,
+    layout,
+    ratioKind,
+    customAspectRatio,
+  );
+}
+
+export function detectTemplateFromImageData(
+  image: ImageData,
+  canvasSize: CanvasSize,
+  page: PageSize,
+  layout: SplitLayout,
+  ratioKind: SlideAspectRatio,
+  customAspectRatio?: number,
+): DetectionResult {
   const halfRects =
     layout === "top-bottom"
       ? [
-          { x: 0, y: 0, width: canvas.width, height: canvas.height / 2 },
-          { x: 0, y: canvas.height / 2, width: canvas.width, height: canvas.height / 2 },
+          { x: 0, y: 0, width: canvasSize.width, height: canvasSize.height / 2 },
+          { x: 0, y: canvasSize.height / 2, width: canvasSize.width, height: canvasSize.height / 2 },
         ]
       : [
-          { x: 0, y: 0, width: canvas.width / 2, height: canvas.height },
-          { x: canvas.width / 2, y: 0, width: canvas.width / 2, height: canvas.height },
+          { x: 0, y: 0, width: canvasSize.width / 2, height: canvasSize.height },
+          { x: canvasSize.width / 2, y: 0, width: canvasSize.width / 2, height: canvasSize.height },
         ];
 
   const ratio =
@@ -220,12 +239,12 @@ export function detectTemplateFromCanvas(
 
   const boxes = halfRects.map((rect) => detectOneBox(image, rect, ratio));
   const bandResult =
-    boxes[0].frame && boxes[1].frame ? null : slideBandTemplate(image, canvas, page, layout);
+    boxes[0].frame && boxes[1].frame ? null : slideBandTemplate(image, canvasSize, page, layout);
   if (bandResult && bandResult.confidence !== "low") return bandResult;
 
   const rawTemplate = {
-    first: canvasRectToPdfBox(boxes[0].rect, canvas, page),
-    second: canvasRectToPdfBox(boxes[1].rect, canvas, page),
+    first: canvasRectToPdfBox(boxes[0].rect, canvasSize, page),
+    second: canvasRectToPdfBox(boxes[1].rect, canvasSize, page),
   };
   const template =
     boxes[0].frame && boxes[1].frame
@@ -264,7 +283,7 @@ export function fullPageTemplate(page: PageSize): CropTemplate {
 
 function slideBandTemplate(
   image: ImageData,
-  canvas: HTMLCanvasElement,
+  canvasSize: CanvasSize,
   page: PageSize,
   layout: SplitLayout,
 ): DetectionResult | null {
@@ -272,8 +291,8 @@ function slideBandTemplate(
   if (!pair) return null;
 
   const rawTemplate = {
-    first: canvasRectToPdfBox(pair.rects[0], canvas, page),
-    second: canvasRectToPdfBox(pair.rects[1], canvas, page),
+    first: canvasRectToPdfBox(pair.rects[0], canvasSize, page),
+    second: canvasRectToPdfBox(pair.rects[1], canvasSize, page),
   };
   const confidence = pair.score > 0.76 ? "high" : pair.score > 0.58 ? "medium" : "low";
 
@@ -818,7 +837,7 @@ function rectToPdfBox(
 
 function canvasRectToPdfBox(
   rect: CanvasRect,
-  canvas: HTMLCanvasElement,
+  canvas: CanvasSize,
   page: PageSize,
 ): ManualCropBox {
   const xScale = page.width / canvas.width;

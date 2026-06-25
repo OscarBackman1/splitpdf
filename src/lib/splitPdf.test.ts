@@ -140,4 +140,35 @@ describe("splitTwoUpPdf", () => {
     expect(split.getPage(0).getHeight()).toBeCloseTo(360);
     expect(split.getPage(1).getWidth()).toBeCloseTo(420);
   });
+
+  it("uses page-specific templates in per-page two-up mode", async () => {
+    const source = await PDFDocument.create();
+    const first = source.addPage([612, 792]);
+    const second = source.addPage([612, 792]);
+    first.drawText("First source page", { x: 80, y: 700, size: 18 });
+    second.drawText("Second source page", { x: 80, y: 700, size: 18 });
+
+    const input = await source.save();
+    const output = await splitTwoUpPdf(input.buffer.slice(0), {
+      ...defaultSettings,
+      cropMode: "per-page-2up-auto",
+      perPageCropTemplates: {
+        0: {
+          first: { left: 40, bottom: 430, right: 520, top: 700 },
+          second: { left: 60, bottom: 80, right: 540, top: 350 },
+        },
+        1: {
+          first: { left: 72, bottom: 448, right: 540, top: 711.25 },
+          second: { left: 72, bottom: 96, right: 540, top: 359.25 },
+        },
+      },
+    });
+
+    const split = await PDFDocument.load(output);
+    expect(split.getPageCount()).toBe(4);
+    expect(split.getPage(0).getWidth()).toBeCloseTo(480);
+    expect(split.getPage(0).getHeight()).toBeCloseTo(270);
+    expect(split.getPage(2).getWidth()).toBeCloseTo(468);
+    expect(split.getPage(2).getHeight()).toBeCloseTo(263.25);
+  });
 });
