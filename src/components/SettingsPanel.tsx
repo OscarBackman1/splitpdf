@@ -1,5 +1,5 @@
 import { useState } from "react";
-import type { DetectionResult, Margins, SplitOrder, SplitSettings } from "../lib/types";
+import type { DetectionResult, SplitOrder, SplitSettings } from "../lib/types";
 
 interface SettingsPanelProps {
   settings: SplitSettings;
@@ -34,8 +34,6 @@ export function SettingsPanel({
 }: SettingsPanelProps) {
   const [advancedOpen, setAdvancedOpen] = useState(false);
   const patch = (next: Partial<SplitSettings>) => onSettingsChange({ ...settings, ...next });
-  const patchMargins = (next: Partial<Margins>) =>
-    patch({ margins: { ...settings.margins, ...next } });
   const isSingleSlideMode = settings.cropMode === "single-slide-page";
 
   return (
@@ -88,7 +86,6 @@ export function SettingsPanel({
                 patch({
                   cropMode: event.target.value as SplitSettings["cropMode"],
                   detectedCropTemplate: undefined,
-                  manualCropTemplate: undefined,
                   gutter: 0,
                   keepFirstPageUnsplit: false,
                 })
@@ -96,41 +93,8 @@ export function SettingsPanel({
             >
               <option value="powerpoint-2up-preset">PowerPoint 2-slide handout</option>
               <option value="single-slide-page">One slide per page</option>
-              <option value="auto-detect">Auto-detect slide boxes</option>
-              <option value="manual">Manual crop</option>
-              <option value="simple-half-split">Simple half split</option>
             </select>
           </label>
-
-          <div className="field-row">
-            <label>
-              Slide ratio
-              <select
-                value={settings.slideAspectRatio}
-                onChange={(event) =>
-                  patch({
-                    slideAspectRatio: event.target.value as SplitSettings["slideAspectRatio"],
-                  })
-                }
-              >
-                <option value="auto">Auto</option>
-                <option value="16:9">16:9</option>
-                <option value="4:3">4:3</option>
-                <option value="custom">Custom</option>
-              </select>
-            </label>
-            <label>
-              Custom
-              <input
-                type="number"
-                min="0.5"
-                step="0.01"
-                value={settings.customAspectRatio ?? 1.78}
-                disabled={settings.slideAspectRatio !== "custom"}
-                onChange={(event) => patch({ customAspectRatio: Number(event.target.value) })}
-              />
-            </label>
-          </div>
 
           {!isSingleSlideMode && (
             <>
@@ -203,32 +167,6 @@ export function SettingsPanel({
             </>
           )}
 
-          <fieldset>
-            <legend>Outer margin trim</legend>
-            <div className="margin-grid">
-              <NumberField
-                label="Top"
-                value={settings.margins.top}
-                onChange={(top) => patchMargins({ top })}
-              />
-              <NumberField
-                label="Right"
-                value={settings.margins.right}
-                onChange={(right) => patchMargins({ right })}
-              />
-              <NumberField
-                label="Bottom"
-                value={settings.margins.bottom}
-                onChange={(bottom) => patchMargins({ bottom })}
-              />
-              <NumberField
-                label="Left"
-                value={settings.margins.left}
-                onChange={(left) => patchMargins({ left })}
-              />
-            </div>
-          </fieldset>
-
           <label>
             Page range
             <input
@@ -274,28 +212,6 @@ function Status({
     <div className={`status ${detection?.confidence === "low" ? "status-warning" : ""}`}>
       {detection?.message ?? "Drop a PDF and the splitter will detect the slide boxes"}
     </div>
-  );
-}
-
-function NumberField({
-  label,
-  value,
-  onChange,
-}: {
-  label: string;
-  value: number;
-  onChange(value: number): void;
-}) {
-  return (
-    <label>
-      {label}
-      <input
-        type="number"
-        min="0"
-        value={value}
-        onChange={(event) => onChange(Number(event.target.value))}
-      />
-    </label>
   );
 }
 

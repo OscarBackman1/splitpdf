@@ -10,10 +10,6 @@ describe("splitTwoUpPdf", () => {
       {
         ...defaultSettings,
         cropMode: "powerpoint-2up-preset",
-        manualCropTemplate: {
-          first: { left: 80, bottom: 470, right: 420, top: 660 },
-          second: { left: 90, bottom: 60, right: 560, top: 360 },
-        },
       },
     );
 
@@ -69,8 +65,8 @@ describe("splitTwoUpPdf", () => {
     const input = await source.save();
     const output = await splitTwoUpPdf(input.buffer.slice(0), {
       ...defaultSettings,
-      cropMode: "manual",
-      manualCropTemplate: {
+      cropMode: "powerpoint-2up-preset",
+      detectedCropTemplate: {
         first: { left: 36, bottom: 430, right: 576, top: 733.75 },
         second: { left: 36, bottom: 58, right: 576, top: 361.75 },
       },
@@ -82,7 +78,7 @@ describe("splitTwoUpPdf", () => {
     expect(split.getPage(0).getHeight()).toBeCloseTo(303.75);
   });
 
-  it("uses detected crop templates outside manual mode", async () => {
+  it("uses adjusted detected crop templates in PowerPoint handout mode", async () => {
     const source = await PDFDocument.create();
     const page = source.addPage([612, 792]);
     page.drawRectangle({
@@ -105,8 +101,8 @@ describe("splitTwoUpPdf", () => {
     const input = await source.save();
     const output = await splitTwoUpPdf(input.buffer.slice(0), {
       ...defaultSettings,
-      cropMode: "auto-detect",
-      manualCropTemplate: {
+      cropMode: "powerpoint-2up-preset",
+      detectedCropTemplate: {
         first: { left: 72, bottom: 440, right: 540, top: 703.25 },
         second: { left: 72, bottom: 88, right: 540, top: 351.25 },
       },

@@ -1,16 +1,13 @@
 import { PDFDocument } from "pdf-lib";
 import {
   applyAdjustments,
-  aspectRatioValue,
   fullPageTemplate,
   orderBoxes,
   powerpointHandoutTemplate,
-  presetTemplate,
-  simpleHalfTemplate,
   validateBox,
 } from "./cropDetection";
 import { parsePageRange } from "./pageRange";
-import type { CropTemplate, SplitProgress, SplitSettings } from "./types";
+import type { CropTemplate, Margins, SplitProgress, SplitSettings } from "./types";
 export type {
   CropMode,
   CropTemplate,
@@ -22,6 +19,9 @@ export type {
   SplitProgress,
   SplitSettings,
 } from "./types";
+
+const DEFAULT_SLIDE_RATIO = 16 / 9;
+const NO_MARGINS: Margins = { top: 0, right: 0, bottom: 0, left: 0 };
 
 export async function splitTwoUpPdf(
   input: ArrayBuffer,
@@ -82,7 +82,7 @@ export function computeTemplate(
   const base = baseTemplate(page, settings);
 
   const gutter = settings.cropMode === "single-slide-page" ? 0 : settings.gutter;
-  return applyAdjustments(base, page, settings.layout, gutter, settings.margins);
+  return applyAdjustments(base, page, settings.layout, gutter, NO_MARGINS);
 }
 
 function baseTemplate(page: { width: number; height: number }, settings: SplitSettings) {
@@ -90,32 +90,9 @@ function baseTemplate(page: { width: number; height: number }, settings: SplitSe
     return settings.detectedCropTemplate ?? fullPageTemplate(page);
   }
 
-  if (
-    (settings.cropMode === "manual" || settings.cropMode === "auto-detect") &&
-    settings.manualCropTemplate
-  ) {
-    return settings.manualCropTemplate;
-  }
-
-  if (settings.cropMode === "simple-half-split") {
-    return simpleHalfTemplate(page, settings.layout);
-  }
-
-  if (settings.cropMode === "powerpoint-2up-preset") {
-    return (
-      settings.detectedCropTemplate ??
-      powerpointHandoutTemplate(
-        page,
-        settings.layout,
-        aspectRatioValue(settings.slideAspectRatio, settings.customAspectRatio),
-      )
-    );
-  }
-
-  return presetTemplate(
-    page,
-    settings.layout,
-    aspectRatioValue(settings.slideAspectRatio, settings.customAspectRatio),
+  return (
+    settings.detectedCropTemplate ??
+    powerpointHandoutTemplate(page, settings.layout, DEFAULT_SLIDE_RATIO)
   );
 }
 

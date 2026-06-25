@@ -6,12 +6,7 @@ export type SplitOrder =
   | "left-right"
   | "right-left";
 
-export type CropMode =
-  | "powerpoint-2up-preset"
-  | "single-slide-page"
-  | "auto-detect"
-  | "manual"
-  | "simple-half-split";
+export type CropMode = "powerpoint-2up-preset" | "single-slide-page";
 
 export type SlideAspectRatio = "auto" | "16:9" | "4:3" | "custom";
 
@@ -38,14 +33,10 @@ export interface SplitSettings {
   layout: SplitLayout;
   order: SplitOrder;
   cropMode: CropMode;
-  slideAspectRatio: SlideAspectRatio;
-  customAspectRatio?: number;
   gutter: number;
-  margins: Margins;
   keepFirstPageUnsplit: boolean;
   pageSelection: string;
   detectedCropTemplate?: CropTemplate;
-  manualCropTemplate?: CropTemplate;
   outputName?: string;
 }
 
@@ -69,9 +60,7 @@ export const defaultSettings: SplitSettings = {
   layout: "top-bottom",
   order: "top-bottom",
   cropMode: "powerpoint-2up-preset",
-  slideAspectRatio: "16:9",
   gutter: 0,
-  margins: { top: 0, right: 0, bottom: 0, left: 0 },
   keepFirstPageUnsplit: false,
   pageSelection: "all",
 };

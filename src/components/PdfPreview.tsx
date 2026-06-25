@@ -1,13 +1,14 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { PointerEvent as ReactPointerEvent } from "react";
 import {
-  aspectRatioValue,
   detectTemplateFromCanvas,
   singleSlideTemplate,
   slideFrameTemplate,
 } from "../lib/cropDetection";
 import { pdfjsLib } from "../lib/pdfjs";
 import type { CropTemplate, DetectionResult, ManualCropBox, PageSize, SplitSettings } from "../lib/types";
+
+const DEFAULT_SLIDE_RATIO = 16 / 9;
 
 interface PdfPreviewProps {
   fileBuffer: ArrayBuffer | null;
@@ -99,32 +100,18 @@ export function PdfPreview({
       return;
     }
     if (settings.cropMode === "powerpoint-2up-preset") {
-      const result = slideFrameTemplate(
-        canvasRef.current,
-        pageSize,
-        settings.layout,
-        aspectRatioValue(settings.slideAspectRatio, settings.customAspectRatio),
-      );
-      if (result) onDetection(result, false);
+      const result =
+        slideFrameTemplate(canvasRef.current, pageSize, settings.layout, DEFAULT_SLIDE_RATIO) ??
+        detectTemplateFromCanvas(canvasRef.current, pageSize, settings.layout, "16:9");
+      onDetection(result, false);
       return;
     }
-    if (settings.cropMode !== "auto-detect") return;
-    const result = detectTemplateFromCanvas(
-      canvasRef.current,
-      pageSize,
-      settings.layout,
-      settings.slideAspectRatio,
-      settings.customAspectRatio,
-    );
-    onDetection(result, false);
   }, [
     onDetection,
     pageSize,
     renderVersion,
     settings.cropMode,
-    settings.customAspectRatio,
     settings.layout,
-    settings.slideAspectRatio,
   ]);
 
   useEffect(() => {
@@ -132,22 +119,15 @@ export function PdfPreview({
     const result =
       settings.cropMode === "single-slide-page"
         ? singleSlideTemplate(canvasRef.current, pageSize)
-        : detectTemplateFromCanvas(
-            canvasRef.current,
-            pageSize,
-            settings.layout,
-            settings.slideAspectRatio,
-            settings.customAspectRatio,
-          );
+        : slideFrameTemplate(canvasRef.current, pageSize, settings.layout, DEFAULT_SLIDE_RATIO) ??
+          detectTemplateFromCanvas(canvasRef.current, pageSize, settings.layout, "16:9");
     onDetection(result, true);
   }, [
     detectionRequest,
     onDetection,
     pageSize,
     settings.cropMode,
-    settings.customAspectRatio,
     settings.layout,
-    settings.slideAspectRatio,
   ]);
 
   const boxes = useMemo(() => {

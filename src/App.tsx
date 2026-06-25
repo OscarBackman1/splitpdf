@@ -117,32 +117,11 @@ export function App() {
   }, []);
 
   const handleDetection = useCallback((result: DetectionResult, requestedByUser: boolean) => {
+    void requestedByUser;
     setDetection(result);
-    if (settings.cropMode === "single-slide-page") {
-      invalidateOutput();
-      setSettings((current) =>
-        current.cropMode === settings.cropMode
-          ? {
-              ...current,
-              detectedCropTemplate: result.template,
-            }
-          : current,
-      );
-      return;
-    }
-
-    if (requestedByUser) {
-      invalidateOutput();
-      setSettings((current) => ({
-        ...current,
-        cropMode: "auto-detect",
-        manualCropTemplate: result.template,
-      }));
-      return;
-    }
-
+    invalidateOutput();
     setSettings((current) =>
-      current.cropMode === "powerpoint-2up-preset"
+      current.cropMode === settings.cropMode
         ? {
             ...current,
             detectedCropTemplate: result.template,
@@ -155,11 +134,7 @@ export function App() {
     invalidateOutput();
     setSettings((current) => ({
       ...current,
-      ...(current.cropMode === "powerpoint-2up-preset" || current.cropMode === "single-slide-page"
-        ? { detectedCropTemplate: template }
-        : current.cropMode === "simple-half-split"
-          ? { cropMode: "manual" as const, manualCropTemplate: template }
-          : { manualCropTemplate: template }),
+      detectedCropTemplate: template,
     }));
   }, [invalidateOutput]);
 
@@ -263,13 +238,7 @@ export function App() {
             onSettingsChange={(next) => {
               invalidateOutput();
               setSettings(next);
-              setDetection((current) =>
-                next.cropMode === "manual" ||
-                next.cropMode === "auto-detect" ||
-                next.cropMode === "single-slide-page"
-                  ? current
-                  : null,
-              );
+              setDetection((current) => (next.detectedCropTemplate ? current : null));
             }}
             onDetect={() => setDetectionRequest((count) => count + 1)}
             onSplit={splitPdf}
